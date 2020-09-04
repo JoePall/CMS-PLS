@@ -58,7 +58,6 @@ class table {
     // INSERT
     insert(values) {
         return new Promise((res, rej) => {
-            console.log(values);
             connection.query(`INSERT INTO ?? (??) VALUES (?);`, [this.tableName, this.insertValues, values], (err, result) => {
                 if (err) rej(err);
                 res(result);

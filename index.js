@@ -39,7 +39,7 @@ const options = {
         let department_id = null;
         if (department) department_id = department.id; 
 
-        roles.insert([title, salary, department.id], () => console.log("Inserted record"));
+        roles.insert([title, salary, department_id]);
     },
     
     // READ
@@ -163,7 +163,7 @@ const getInput = async (question) => {
             result = await getNumber(question);
         }
         
-        return parseInt(res.value);
+        return parseInt(result);
     });
 }
 
