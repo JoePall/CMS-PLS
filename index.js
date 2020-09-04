@@ -18,21 +18,28 @@ const options = {
         let role = await selectFromTable(roles, "Select a Role?", x => x.title);
         let manager = await getEmployeeSelection("Select a Manager?");
         
-        let values = [first_name, last_name, role.id, manager.id];
+        let role_id = null;
+        if (role) role_id = role.id;
+        let manager_id = null;
+        if (role) manager_id = manager.id; 
+        let values = [first_name, last_name, role_id, manager_id];
         
-        return employees.insert(values);
+        employees.insert(values);
     },
     "Create Department": async () => {
         let name = await getInput("Department");
         
-        return departments.insert([name]);
+        departments.insert([name]);
     },
     "Create Role": async () => {
         let title = await getInput("Title");
         let salary = await getNumber("Salary");
         let department = await selectFromTable(departments, "Select a Department?", x => x.name);
-        
-        return roles.insert([title, salary, department.id], () => console.log("Inserted record"));
+
+        let department_id = null;
+        if (department) department_id = department.id; 
+
+        roles.insert([title, salary, department.id], () => console.log("Inserted record"));
     },
     
     // READ

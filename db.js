@@ -59,12 +59,10 @@ class table {
     insert(values) {
         return new Promise((res, rej) => {
             console.log(values);
-            let query = connection.query(`INSERT INTO ?? (??) VALUES (?);`, [this.tableName, this.insertValues, values], (err, result) => {
+            connection.query(`INSERT INTO ?? (??) VALUES (?);`, [this.tableName, this.insertValues, values], (err, result) => {
                 if (err) rej(err);
                 res(result);
             });
-
-            console.log(query);
         });
     };
 }
