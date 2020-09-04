@@ -1,5 +1,5 @@
-![Enhancements](https://img.shields.io/github/issues/JoePall/CMS-PLS/enhancement.svg)](https://github.com/JoePall/CMS-PLS/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement+sort%3Areactions-%2B1-desc)
-![Bugs](https://img.shields.io/github/issues/JoePall/CMS-PLS/bug.svg)](https://github.com/JoePall/CMS-PLS/issues?utf8=✓&q=is%3Aissue+is%3Aopen+label%3Abug)
+[![Enhancements](https://img.shields.io/github/issues/JoePall/CMS-PLS/enhancement.svg)](https://github.com/JoePall/CMS-PLS/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement+sort%3Areactions-%2B1-desc)
+[![Bugs](https://img.shields.io/github/issues/JoePall/CMS-PLS/bug.svg)](https://github.com/JoePall/CMS-PLS/issues?utf8=✓&q=is%3Aissue+is%3Aopen+label%3Abug)
 ![License](https://img.shields.io/badge/License-MIT%20License-green?style=flat-square.svg)
 
 # CMS PLS
