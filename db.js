@@ -27,12 +27,6 @@ class table {
         });
     };
 
-    getByID(id) {
-        return new Promise((res, rej) => {
-            this.getByFieldMatch("id", id);
-        });
-    };
-
     getByFieldMatch(field, id) {
         return new Promise((res, rej) => {
             connection.query(`SELECT * FROM ?? WHERE ?? = ?;`, [this.tableName, field, id], (err, result) => {
