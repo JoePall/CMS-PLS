@@ -1,24 +1,9 @@
 const { table } = require("console");
-const inquirer = require("inquirer");
-const pw = require("fs").readFileSync("./env/password.txt", "utf-8").trim();
-const mysql = require("mysql");
-const { exit } = require("process");
+const { prompt } = require("inquirer");
 const db = require("./db");
-
-const connection = mysql.createConnection({
-    host: "localhost",
-    port: 3306,
-    user: "root",
-    password: pw,
-    database: "employee_cms_db"
-});
-
-connection.connect(async (err) => {
-    if (err) return console.error("error connecting: " + err.stack);
-    
-    intro();
-    run(options, true);
-});
+const employees = new db.employees();
+const roles = new db.roles();
+const departments = new db.departments();
 
 const intro = () => {
     console.log(`\n\n ____              ____        ____    __       ____        \n/\\  _\`\\    /'\\_/\`\\/\\  _\`\\     /\\  _\`\\ /\\ \\     /\\  _\`\\      \n\\ \\ \\/\\_\\ /\\      \\ \\,\\L\\_\\   \\ \\ \\L\\ \\ \\ \\    \\ \\,\\_\\_\\    \n \\ \\ \\/_/_\\ \\ \\__\\ \\/_\\__ \\    \\ \\ ,__/\\ \\ \\  __\\/_\\__ \\    \n  \\ \\ \\L\\ \\\\ \\ \\_/\\ \\/\\ \\L\\ \\   \\ \\ \\/  \\ \\ \\L\\ \\ /\\ \\_\\ \\  \n   \\ \\____/ \\ \\_\\\\ \\_\\ \`\\____\\   \\ \\_\\   \\ \\____/ \\ \`\\____\\ \n    \\/___/   \\/_/ \\/_/\\/_____/    \\/_/    \\/___/   \\/_____/\n\n\n\n                  BUILT BY: Josiah Powell                  \n\n`);
@@ -30,58 +15,44 @@ const options = {
     "Create Employee": async () => {
         let first_name = await getInput("First Name");
         let last_name = await getInput("Last Name");
-        let managerId = await getSelectedRowID("Select a Manager?", "employees", x => x.first_name + " " + x.last_name);
-        let roleId = await getSelectedRowID("Select a Role?", "roles", x => x.title);
+        let role = await selectFromTable(roles, "Select a Role?", x => x.title);
+        let manager = await selectFromTable(employees, "Select a Manager?", x => x.first_name + " " + x.last_name);
 
-        return await connection.query(`INSERT INTO employees (first_name, last_name, role_id, manager_id) VALUES (?);`, [values], (err, res) => {
-            if (err) console.log(err);
-            else table(res);
-        });
+        let values = [first_name, last_name, role.id, manager.id];
+
+        return employees.insert(values);
     },
     "Create Department": async () => {
         let name = await getInput("Department");
-        return await knex('departments').insert({name: name});
+
+        return departments.insert([name]);
     },
     "Create Role": async () => {
         let title = await getInput("Title");
         let salary = await getNumber("Salary");
-        let departmentId = await getSelectedRowID("Select a Department?", "departments", x => x.title);
-        return await knex('roles').insert({title: title, salary: salary, department_id: departmentId});
+        let department = await selectFromTable(departments, "Select a Department?", x => x.name);
+
+        return roles.insert([title, salary, department.id], () => console.log("Inserted record"));
     },
 
     // READ
-    "View all Employees": db.get("employees"),
-    "View all Departments": db.get("departments"),
-    "View all Roles": db.get("roles"),
+    "View all Employees": async () => await employees.get(),
+    "View all Departments": async () => await departments.get(),
+    "View all Roles": async () => await roles.get(),
     "View all Employees by Manager": async () => {
-        let id = await getSelectedRowID("Select a Manager?", "employees", x => x.first_name + " " + x.last_name);
-        return await db.getMatchesOn("employees", "manager_id", id);
+        let manager = await selectFromTable(employees, "Select a Manager?", x => x.first_name + " " + x.last_name);
+        return employees.getByFieldMatch("manager_id", manager.id);
     },
 
     // UPDATE
 
     // DELETE
-    "Delete Employee": async () => {
-        let id = await getSelectedRowID("Select an Employee?", "employees", x => x.first_name + " " + x.last_name);
-        return await db.deleteEmployee(id);
-    },
-
-    "Delete Department": async () => {
-        let id = await getSelectedRowID("Select a Department?", "departments", x => x.name);
-        return await db.deleteEmployee(id);
-    },
-    "Delete Role": async () => {
-        let id = await getSelectedRowID("Select a Role?", "roles", x => x.title);
-        return await db.deleteEmployee(id);
-    },
 
     "QUIT": "QUIT",
 };
 
-
-
 const run = async (options, recursiveRun = false) => {
-    await inquirer.prompt({
+    await prompt({
         type: 'list',
         name: 'choice',
         message: 'What would you like to do?',
@@ -89,39 +60,40 @@ const run = async (options, recursiveRun = false) => {
     })
         .then(async (val) => {
             try {
-                await options[val.choice].then(table);
-            } catch (error) {
-                try {
-                    await options[val.choice]().then(table);
-                } catch (error) {
-                    exit("1");
-                }
-            }
+                await options[val.choice]().then(table);
+            } catch (error) { }
 
-            if (recursiveRun) await run(options, recursiveRun);
+            if (recursiveRun) run(options, recursiveRun);
         });
 }
 
-
-const getSelectedRowID = async (question, tableName, getDisplayName) => {
-    let objects = await db.get(tableName);
+const selectFromTable = async (table, promptTitle, getDisplayName) => {
+    let objects = await table.get();
     let selectableChoices = objects.map(x => { return { id: x.id, name: getDisplayName(x) }; });
-    let selectionID = await inquirer.prompt({
+    return await prompt({
         type: 'list',
         name: 'choice',
-        message: question,
-        choices: selectableChoices.map(x => x.name)
+        message: promptTitle,
+        choices: ["none", ...selectableChoices.map(x => x.name)]
     })
-    .then(res => selectableChoices.find(x => x.name === res.choice))
-    .then(x => x.id);
+    .then(selection => {
+        if (selection.choice === "none") return null;
+        else {
+            return selectableChoices.find(x => x.name === selection.choice);
+        }
+    });
+}
 
-    return selectionID;
+const selectEmployeeId = (question, getDisplayName) => {
+    return employees.get()
+        .then(objects =>
+            selectEmployee(objects, getDisplayName, question).id);
 }
 
 const getInput = async (question) => {
     let result;
 
-    await inquirer.prompt({
+    await prompt({
         type: 'input',
         name: 'value',
         message: question,
@@ -136,30 +108,42 @@ const getInput = async (question) => {
 const getNumber = async (question) => {
     let result;
 
-    await inquirer.prompt({
+    await prompt({
         type: 'number',
         name: 'value',
         message: question,
     })
-    .then(async res => {
-        if (isNaN(res.value)) {
-            console.log("Value must be a number.");
-            result = await getNumber(question);
-        }
+        .then(async res => {
+            if (isNaN(res.value)) {
+                console.log("Value must be a number.");
+                result = await getNumber(question);
+            }
 
-        return parseInt(res.value);
-    });
+            return parseInt(res.value);
+        });
 
 }
 
+const init = () => {
+    intro();
+    run(options, true);
+};
+init();
 
 
-
-
-
-// await myQueries.getRoles().then(console.table);
-// await myQueries.getDepartments().then(console.table);
-
+async function selectEmployee(objects, getDisplayName, question) {
+    let selectableChoices = objects.map(x => { return { id: x.id, name: getDisplayName(x) }; });
+    await prompt({
+        type: 'list',
+        name: 'choice',
+        message: question,
+        choices: ["none", ...selectableChoices.map(x => x.name)]
+    })
+        .then(selection => {
+            if (selection.choice === "none") res(null);
+            res(selectableChoices.find(x => x.name === selection.choice));
+        });
+}
 
 
 // myQueries.createRole("Manager", 70000);

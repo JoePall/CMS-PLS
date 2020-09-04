@@ -1,93 +1,98 @@
 const pw = require("fs").readFileSync("./env/password.txt", "utf-8").trim();
-const { table } = require("console");
 const mysql = require("mysql");
-const knex = require('knex')({
-    client: 'mysql',
-    connection: {
-        host: '127.0.0.1',
-        user: 'root',
-        password: pw,
-        database: 'employee_cms_db'
-    }
+
+const connection = mysql.createConnection({
+    host: "localhost",
+    port: 3306,
+    user: "root",
+    password: pw,
+    database: "employee_cms_db"
 });
 
-const db = {
-    get: async (tableName) => {
-        return await knex(tableName)
-            .on("query", x => x);
-    },
-    getMatchesOn: async (tableName, field, value) => {
-        return await knex(tableName)
-            .where(field, value)
-            .on("query", x => x);
-    },
+connection.connect((err) => {
+    if (err) return console.error("error connecting: " + err.stack);
+});
 
-    // CREATE
-    createEmployee: async (first_name, last_name, id = null, role_id = null, department_id = null) => {
-        let values = [first_name, last_name, role_id, department_id]
-        
-        return await connection.query(`INSERT INTO employees (first_name, last_name, role_id, manager_id) VALUES (?);`, [values], (err, res) => {
-            if (err) console.log(err);
-            else table(res);
+class table {
+    constructor() {
+        this.tableName = this.constructor.name;
+    }
+
+    get() {
+        return new Promise((res, rej) => {
+            connection.query(`SELECT * FROM ??;`, this.tableName, (err, result) => {
+                if (err) rej(err);
+                res(result);
+            });
         });
-    },    
-    createDepartment: async (name, id = null) => {
-        return await knex('departments').insert({ id: id, name: name });
-    },    
-    createRole: async (title, salary, id = null, department_id = null) => {
-        return await knex('roles').insert({ id: id, title: title, salary: salary, department_id: department_id });
-    },
+    };
 
-    // DELETE
-    deleteEmployee: async (id) => {
-        return await knex('employees').delete();
-    },
-    deleteDepartment: async (id) => {
-        return await knex('departments').delete();
-    },
-    deleteRole: async (id) => {
-        return await knex('roles').delete();
-    },    
+    getByID(id) {
+        return new Promise((res, rej) => {
+            this.getByFieldMatch("id", id);
+        });
+    };
 
-    // // UPDATE
-    // updateEmployees: async () => {
-    //     return await knex("employee")
-    //         .on("query", x => x)
-    //         .then(result => result);
-    // },
-    // updateDepartments: async () => {
-    //     return await knex("department")
-    //         .on("query", x => x)
-    //         .then(result => result);
-    // },
-    // updateRoles: async () => {
-    //     return await knex("role")
-    //         .on("query", x => x)
-    //         .then(result => result);
-    // }
+    getByFieldMatch(field, id) {
+        return new Promise((res, rej) => {
+            connection.query(`SELECT * FROM ?? WHERE ?? = ?;`, [this.tableName, field, id], (err, result) => {
+                if (err) rej(err);
+                res(result);
+            });
+        });
+    };
 
-    // TODO: User can CREATE departments, roles, employees
-    // TODO: User can READ departments, roles, employees
-    // TODO: User can UPDATE Update employee roles
+    // INSERT
+    insert(values) {
+        return new Promise((res, rej) => {
+            console.log(values);
+            let query = connection.query(`INSERT INTO ?? (??) VALUES (?);`, [this.tableName, this.insertValues, values], (err, result) => {
+                if (err) rej(err);
+                res(result);
+            });
 
+            console.log(query);
+        });
+    };
 }
 
-// TODO: You may wish to have a separate file containing functions for performing specific SQL queries you'll need to use. Could a constructor function or a class be helpful for organizing these?
+class departments extends table {
+    constructor() {
+        super();
+        this.insertValues = ["name"];
+    }
+}
 
-// TODO: You will need to perform a variety of SQL JOINS to complete this assignment, and it's recommended you review the week's activities if you need a refresher on this.
+class employees extends table {
+    constructor() {
+        super();
+        this.insertValues = ["first_name", "last_name", "role_id", "manager_id"];
+    }
 
+    getEmployeesWithManagers() {
+        return new Promise((res, rej) => {
+            connection.query(`SELECT * FROM ${this.tableName} WHERE COUNT(manager_id) > 0;`, (err, result) => {
+                if (err) rej(err);
+                res(result);
+            });
+        });
+    };
 
+    getEmployeesWithRoles() {
+        return new Promise((res, rej) => {
+            connection.query(`SELECT * FROM ${this.tableName} WHERE COUNT(role_id) > 0;`, (err, result) => {
+                if (err) rej(err);
+                res(result);
+            });
+        });
+    };
+}
 
+class roles extends table {
+    constructor() {
+        super();
+        this.insertValues = ["title", "salary", "department_id"];
+    }
+}
 
-
-// SELECT * FROM employee_cms_db.employee;
-
-//HINT: This can be done in a couple different ways using external data as well, but you do have all of the data you need within your database to find the correlations.Give your methods some thought before having to rely upon external info.
-
-//HINT: Remember that MySQL has the ability to combine two or more tables together so long as they share equivalent data.What data is similar between the two lists ?
-
-
-
-
-
-module.exports = db;
+module.exports = { departments, roles, employees };
