@@ -42,6 +42,25 @@ class table {
         });
     };
 
+    delete(id) {
+        return new Promise((res, rej) => {
+            connection.query(`DELETE FROM ?? WHERE ??.\`id\` = ?;`, [this.tableName, this.tableName, id], (err, result) => {
+                if (err) rej(err);
+                res(result);
+            });
+        });
+    };
+
+    updateFieldOnId(id, field, value) {
+        return new Promise((res, rej) => {
+            connection.query(`UPDATE ?? SET ??.?? = ? WHERE ??.\`id\` = ?;`, [this.tableName, this.tableName, field, value, this.tableName, id], (err, result) => {
+                if (err) rej(err);
+                
+                res(result);
+            });
+        });
+    };
+
     // INSERT
     insert(values) {
         return new Promise((res, rej) => {
@@ -61,6 +80,19 @@ class departments extends table {
         super();
         this.insertValues = ["name"];
     }
+
+    getTotalBudget(id) {
+        return new Promise((res, rej) => {
+            connection.query(`SELECT SUM(roles.salary) 
+FROM departments
+INNER JOIN roles
+ON departments.id = roles.department_id
+WHERE departments.id = ?;`, id, (err, result) => {
+                if (err) rej(err);
+                res(result);
+            });
+        });
+    };
 }
 
 class employees extends table {
@@ -68,24 +100,6 @@ class employees extends table {
         super();
         this.insertValues = ["first_name", "last_name", "role_id", "manager_id"];
     }
-
-    getEmployeesWithManagers() {
-        return new Promise((res, rej) => {
-            connection.query(`SELECT * FROM ${this.tableName} WHERE COUNT(manager_id) > 0;`, (err, result) => {
-                if (err) rej(err);
-                res(result);
-            });
-        });
-    };
-
-    getEmployeesWithRoles() {
-        return new Promise((res, rej) => {
-            connection.query(`SELECT * FROM ${this.tableName} WHERE COUNT(role_id) > 0;`, (err, result) => {
-                if (err) rej(err);
-                res(result);
-            });
-        });
-    };
 }
 
 class roles extends table {

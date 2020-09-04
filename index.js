@@ -1,5 +1,6 @@
 const { table } = require("console");
 const { prompt } = require("inquirer");
+const { exit } = require("process");
 const db = require("./db");
 const employees = new db.employees();
 const roles = new db.roles();
@@ -10,13 +11,15 @@ const intro = () => {
     console.log("     This application is currently under construction.\n\n\n");
 }
 
+const getEmployeeSelection = (promptMessage) => selectFromTable(employees, promptMessage, x => x.first_name + " " + x.last_name);
+
 const options = {
     // CREATE
     "Create Employee": async () => {
         let first_name = await getInput("First Name");
         let last_name = await getInput("Last Name");
         let role = await selectFromTable(roles, "Select a Role?", x => x.title);
-        let manager = await selectFromTable(employees, "Select a Manager?", x => x.first_name + " " + x.last_name);
+        let manager = await getEmployeeSelection("Select a Manager?");
 
         let values = [first_name, last_name, role.id, manager.id];
 
@@ -39,15 +42,48 @@ const options = {
     "View all Employees": async () => await employees.get(),
     "View all Departments": async () => await departments.get(),
     "View all Roles": async () => await roles.get(),
-    "View all Employees by Manager": async () => {
-        let manager = await selectFromTable(employees, "Select a Manager?", x => x.first_name + " " + x.last_name);
+    "View all Employees under a Manager": async () => {
+        let manager = await getEmployeeSelection("Select a Manager?");
         return employees.getByFieldMatch("manager_id", manager.id);
     },
 
-    // UPDATE
+    "Update employee Role": async () => {
+        let employee = await getEmployeeSelection("Select Employee?");
+        let role = await selectFromTable(roles, "Select Role?", x => x.title);
+        
+        employees.updateFieldOnId(employee.id, "role_id", role.id);
+    },
 
-    // DELETE
+    "Update employee Manager": async () => {
+        let employee = await getEmployeeSelection("Select Employee?");
+        let manager;
+        do {
+            manager = await getEmployeeSelection("Select Manager?");
+            if (manager.id === employee.id) console.log("Manager must be a different selection from employee.");
+        } while (manager.id === employee.id)
 
+        employees.updateFieldOnId(employee.id, "manager_id", manager.id);
+    },
+    "Delete Employee": async () => {
+        let selection = await selectFromTable(employees, "Select Employee?", x => x.first_name + " " + x.last_name);
+
+        employees.delete(selection.id);
+    },
+    "Delete Department": async () => {
+        let selection = await selectFromTable(departments, "Select Department?", x => x.name);
+
+        departments.delete(selection.id);
+    },
+    "Delete Role": async () => {
+        let selection = await selectFromTable(roles, "Select Role?", x => x.title);
+
+        roles.delete(selection.id);
+    },
+    "View Total Budget by Department": async () => {
+        let selection = await selectFromTable(departments, "Select Department?", x => x.name);
+
+        return departments.getTotalBudget(selection.id);
+    },
     "QUIT": "QUIT",
 };
 
@@ -58,13 +94,17 @@ const run = async (options, recursiveRun = false) => {
         message: 'What would you like to do?',
         choices: Object.keys(options),
     })
-        .then(async (val) => {
-            try {
-                await options[val.choice]().then(table);
-            } catch (error) { }
+    .then(async (val) => {
+        try {
+            if (val.choice === "QUIT") exit(1);
+            await options[val.choice]().then(data => {
+                if (data === undefined) return;
+                table(data);
+            });
+        } catch (error) { }
 
-            if (recursiveRun) run(options, recursiveRun);
-        });
+        if (recursiveRun) run(options, recursiveRun);
+    });
 }
 
 const selectFromTable = async (table, promptTitle, getDisplayName) => {
@@ -84,12 +124,6 @@ const selectFromTable = async (table, promptTitle, getDisplayName) => {
     });
 }
 
-const selectEmployeeId = (question, getDisplayName) => {
-    return employees.get()
-        .then(objects =>
-            selectEmployee(objects, getDisplayName, question).id);
-}
-
 const getInput = async (question) => {
     let result;
 
@@ -98,9 +132,9 @@ const getInput = async (question) => {
         name: 'value',
         message: question,
     })
-        .then(res => {
-            result = res.value;
-        });
+    .then(res => {
+        result = res.value;
+    });
 
     return result;
 }
@@ -113,15 +147,14 @@ const getNumber = async (question) => {
         name: 'value',
         message: question,
     })
-        .then(async res => {
-            if (isNaN(res.value)) {
-                console.log("Value must be a number.");
-                result = await getNumber(question);
-            }
+    .then(async res => {
+        if (isNaN(res.value)) {
+            console.log("Value must be a number.");
+            result = await getNumber(question);
+        }
 
-            return parseInt(res.value);
-        });
-
+        return parseInt(res.value);
+    });
 }
 
 const init = () => {
@@ -129,80 +162,6 @@ const init = () => {
     run(options, true);
 };
 init();
-
-
-async function selectEmployee(objects, getDisplayName, question) {
-    let selectableChoices = objects.map(x => { return { id: x.id, name: getDisplayName(x) }; });
-    await prompt({
-        type: 'list',
-        name: 'choice',
-        message: question,
-        choices: ["none", ...selectableChoices.map(x => x.name)]
-    })
-        .then(selection => {
-            if (selection.choice === "none") res(null);
-            res(selectableChoices.find(x => x.name === selection.choice));
-        });
-}
-
-
-// myQueries.createRole("Manager", 70000);
-//queryDB(query);
-
-//TODO: Use node, inquirer, and MySQL.
-
-//TODO: Design the following database schema containing three tables:
-
-// TODO: User can CREATE departments, roles, employees
-// TODO: User can READ departments, roles, employees
-// TODO: User can UPDATE Update employee roles
-
-// Bonus
-// TODO: Update employee managers
-// TODO: View employees by manager
-// TODO: Delete departments, roles, and employees
-// TODO: View the total utilized budget of a department -- ie the combined salaries of all employees in that department
-
-// TODO: * Use [console.table](https://www.npmjs.com/package/console.table) to print MySQL rows to the console. There is a built-in version of `console.table`, but the NPM package formats the data a little better for our purposes.
-
-// TODO: FINISH BREAKDOWN...
-// Include a `seed.sql` file to pre-populate your database. This will make development of individual features much easier.
-// * Focus on getting the basic functionality completed before working on more advanced features.
-// * Check out [SQL Bolt](https://sqlbolt.com/) for some extra MySQL help.
-
-// * GitHub repository with a unique name and a README describing the project.
-// * The command-line application should allow users to:
-//   * Add departments, roles, employees
-//   * View departments, roles, employees
-//   * Update employee roles
-
-// ## Bonus
-
-// * The command-line application should allow users to:
-
-//   * Update employee managers
-
-//   * View employees by manager
-
-//   * Delete departments, roles, and employees
-
-//   * View the total utilized budget of a department -- ie the combined salaries of all employees in that department
-
-// ## Commit Early and Often
-
-// One of the most important skills to master as a web developer is version control. Building the habit of committing via Git is important for two reasons:
-
-// * Your commit history is a signal to employers that you are actively working on projects and learning new skills.
-
-// * Your commit history allows you to revert your codebase in the event that you need to return to a previous state.
-
-// Follow these guidelines for committing:
-
-// * Make single-purpose commits for related changes to ensure a clean, manageable history. If you are fixing two issues, make two commits.
-
-// * Write descriptive, meaningful commit messages so that you and anyone else looking at your repository can easily understand its history.
-
-// * Don't commit half-done work, for the sake of your collaborators (and your future self!).
 
 // REQUIRED...
 // * The URL of the GitHub repository
