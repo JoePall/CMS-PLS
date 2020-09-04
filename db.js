@@ -1,11 +1,10 @@
-const pw = require("fs").readFileSync("./env/password.txt", "utf-8").trim();
 const mysql = require("mysql");
 
 const connection = mysql.createConnection({
     host: "localhost",
     port: 3306,
     user: "root",
-    password: pw,
+    password: "SwimmingOtters357",
     database: "employee_cms_db"
 });
 
@@ -74,11 +73,8 @@ class departments extends table {
 
     getTotalBudget(id) {
         return new Promise((res, rej) => {
-            connection.query(`SELECT SUM(roles.salary) 
-FROM departments
-INNER JOIN roles
-ON departments.id = roles.department_id
-WHERE departments.id = ?;`, id, (err, result) => {
+            connection.query(`SELECT SUM(roles.salary) FROM departments INNER JOIN roles 
+            ON departments.id = roles.department_id WHERE departments.id = ?;`, id, (err, result) => {
                 if (err) rej(err);
                 res(result);
             });

@@ -9,11 +9,24 @@
 <!--ts-->
 * [Table of contents](#table-of-contents)
 * [Description](#description)
+* [Installation](#Installation)
+* [Questions](#Questions)
+* [License](#License)
 <!--te-->
+
+## Installation
+
+1. Open the project in VS Code.
+2. Run Schema.sql against your server
+3. Configure the server connection in <a href="db.js">db.js</a> lines 4 through 8
+4. In VS Code Explorer Open NPM Scripts Tab
+5. Run seed
+6. Run start
 
 ## Description
 
-<p>This project allows the user to manage roles, departments and employee info from the CLI.</p>
+<p>This project allows the user to manage roles, departments and employee info from a CLI.</p>
+<a href="https://drive.google.com/file/d/1Wqy9gpPOIHXVxU7YF1R9_DCWg9qRi-Ho/preview">https://drive.google.com/file/d/1Wqy9gpPOIHXVxU7YF1R9_DCWg9qRi-Ho/preview</a>
 
 ## Questions
 

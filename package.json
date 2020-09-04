@@ -7,11 +7,11 @@
     "author": "Josiah Powell",
     "license": "ISC",
     "scripts": {
-        "start": "node index.js"
+        "start": "node index.js",
+        "seed": "node seed.js"
     },
     "dependencies": {
         "inquirer": "^7.3.3",
-        "linq2mysql": "0.0.14",
         "mysql": "^2.18.1",
         "util": "^0.12.3"
     }
